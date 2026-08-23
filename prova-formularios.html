@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Avaliação Online</title>
+<style>
+/* ===================== TEMA ===================== */
+:root{
+  --bg:#f1f5f9; --bg2:#ffffff; --line:#e2e8f0; --txt:#0f172a; --mut:#64748b;
+  --brand:#0f766e; --brand2:#0d9488; --brand-soft:#ccfbf1;
+  --ok:#15803d; --ok-soft:#dcfce7; --err:#b91c1c; --err-soft:#fee2e2;
+  --warn:#b45309; --warn-soft:#fef3c7; --shadow:0 1px 3px rgba(15,23,42,.08),0 8px 24px rgba(15,23,42,.06);
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0b1220; --bg2:#111c2e; --line:#1e293b; --txt:#e2e8f0; --mut:#94a3b8;
+    --brand:#2dd4bf; --brand2:#14b8a6; --brand-soft:#134e4a;
+    --ok:#4ade80; --ok-soft:#14532d; --err:#f87171; --err-soft:#450a0a;
+    --warn:#fbbf24; --warn-soft:#451a03; --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  line-height:1.55;-webkit-text-size-adjust:100%;
+}
+.wrap{max-width:820px;margin:0 auto;padding:20px 16px 80px}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+h1,h2,h3{line-height:1.25;margin:0}
+h1{font-size:clamp(1.35rem,4vw,1.9rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.05rem;font-weight:750}
+p{margin:.5em 0}
+.mut{color:var(--mut)}
+.small{font-size:.85rem}
+.tiny{font-size:.78rem}
+.center{text-align:center}
+.hidden{display:none !important}
+
+/* ===================== BOTÕES / CAMPOS ===================== */
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;transition:.15s}
+button:disabled{opacity:.5;cursor:not-allowed}
+.btn{background:var(--brand);color:#fff;padding:13px 22px;font-weight:700;font-size:1rem;width:100%}
+@media (prefers-color-scheme: dark){ .btn{color:#052e2b} }
+.btn:hover:not(:disabled){filter:brightness(1.08)}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line);padding:11px 18px;font-weight:600}
+.btn-ghost:hover:not(:disabled){border-color:var(--brand)}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+label{display:block;font-weight:650;font-size:.9rem;margin:16px 0 6px}
+input,select,textarea{
+  width:100%;font:inherit;padding:12px 14px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg);color:var(--txt)
+}
+input:focus,select:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:transparent}
+
+/* ===================== CABEÇALHO FIXO ===================== */
+.top{
+  position:sticky;top:0;z-index:40;background:var(--bg2);
+  border-bottom:1px solid var(--line);padding:10px 16px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap
+}
+.top .id{font-weight:700;font-size:.9rem;flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.timer{
+  font-variant-numeric:tabular-nums;font-weight:800;font-size:1.05rem;
+  background:var(--brand-soft);color:var(--brand);padding:6px 12px;border-radius:999px
+}
+.timer.alerta{background:var(--warn-soft);color:var(--warn);animation:pulse 1.2s infinite}
+.timer.critico{background:var(--err-soft);color:var(--err);animation:pulse .8s infinite}
+@keyframes pulse{50%{opacity:.55}}
+.barra{height:4px;background:var(--line);border-radius:999px;overflow:hidden;width:100%}
+.barra>div{height:100%;background:var(--brand);width:0;transition:width .3s}
+
+/* ===================== QUESTÕES ===================== */
+.q{padding:22px 20px;margin-top:18px}
+.q .num{font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+.q .enun{font-size:1.06rem;font-weight:600;margin:8px 0 4px;white-space:pre-wrap}
+.q img{max-width:100%;border-radius:10px;margin-top:12px;border:1px solid var(--line)}
+.q pre{
+  background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+  overflow-x:auto;font-size:.88rem;line-height:1.5;margin-top:12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+@media (max-width:520px){
+  /* no celular, quebra as linhas longas em vez de exigir rolagem lateral */
+  .q pre{white-space:pre-wrap;word-break:break-word;font-size:.82rem}
+}
+.alts{margin-top:16px;display:flex;flex-direction:column;gap:9px}
+.alt{
+  display:flex;gap:12px;align-items:flex-start;padding:13px 15px;border:1.5px solid var(--line);
+  border-radius:11px;cursor:pointer;background:var(--bg);transition:.12s
+}
+.alt:hover{border-color:var(--brand)}
+.alt input{display:none}
+.alt .letra{
+  flex:none;width:27px;height:27px;border-radius:50%;border:1.5px solid var(--line);
+  display:grid;place-items:center;font-weight:800;font-size:.82rem;background:var(--bg2)
+}
+.alt.sel{border-color:var(--brand);background:var(--brand-soft)}
+.alt.sel .letra{background:var(--brand);color:var(--bg2);border-color:var(--brand)}
+.alt.certa{border-color:var(--ok);background:var(--ok-soft)}
+.alt.errada{border-color:var(--err);background:var(--err-soft)}
+.alt .txt{flex:1;padding-top:2px}
+
+/* ===================== NAVEGADOR ===================== */
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:8px;margin-top:14px}
+.gbtn{
+  aspect-ratio:1;border-radius:9px;border:1.5px solid var(--line);background:var(--bg);
+  color:var(--txt);font-weight:750;font-size:.9rem
+}
+.gbtn.feita{background:var(--brand);color:var(--bg2);border-color:var(--brand)}
+.gbtn.atual{outline:2.5px solid var(--brand);outline-offset:2px}
+
+/* ===================== AVISOS ===================== */
+.aviso{padding:13px 16px;border-radius:11px;font-size:.9rem;margin-top:14px;border:1px solid}
+.aviso.info{background:var(--brand-soft);border-color:var(--brand);color:var(--brand)}
+.aviso.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.aviso.err{background:var(--err-soft);border-color:var(--err);color:var(--err)}
+.aviso.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+
+/* ===================== RESULTADO ===================== */
+.nota{font-size:3.4rem;font-weight:900;letter-spacing:-.03em;line-height:1;margin:6px 0}
+.protocolo{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:1.5rem;font-weight:800;
+  letter-spacing:.18em;background:var(--bg);border:1px dashed var(--line);
+  padding:12px;border-radius:10px;margin-top:8px
+}
+.modal{position:fixed;inset:0;background:rgba(2,6,23,.65);display:grid;place-items:center;padding:20px;z-index:90}
+.modal .card{max-width:420px;padding:24px;width:100%}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     PARTE 1 — CONFIGURAÇÃO DA PROVA
+     É AQUI que você mexe. Tudo abaixo desta caixa é o motor
+     e não precisa ser alterado.
+     ============================================================ -->
+<script>
+const CONFIG = {
+  /* --- Identificação --- */
+  professor:  "Prof. Romerson Medina",
+  disciplina: "Desenvolvimento Web",
+  titulo:     "Avaliação — Formulários em HTML",
+  turmas:     ["1ªIM01-EMI-IPI", "2ªIM02-EMI-IPI"],   // aparecem na lista do aluno
+
+  /* Opcional: grava na planilha a disciplina certa conforme a turma escolhida */
+  disciplinaPorTurma: {
+    "1ªIM01-EMI-IPI": "Introdução ao Desenvolvimento Web",
+    "2ªIM02-EMI-IPI": "Linguagem de Programação Aplicada à Web"
+  },
+
+  /* --- Regras --- */
+  duracaoMinutos: 100,       // 0 = sem limite de tempo
+  senha: "FORM25",           // código que você dita na hora da prova. "" = sem senha
+  embaralharQuestoes: true,  // ordem diferente para cada aluno (dificulta cola)
+  embaralharAlternativas: true,
+  exigirTodasRespondidas: false, // true = não deixa finalizar com questão em branco
+
+  /* --- O que o aluno vê no fim --- */
+  mostrarNotaNaHora: true,   // false = só "prova enviada", você divulga depois
+  mostrarGabarito: false,    // true = mostra quais acertou/errou (cuidado: alunos comparam)
+
+  /* --- Registro --- */
+  urlPlanilha: "",           // cole aqui o link /exec do Apps Script (Google Sheets)
+  registrarTrocaDeAba: true, // conta quantas vezes o aluno saiu da aba durante a prova
+
+  /* --- Questões ---
+     correta: número da alternativa certa começando em 0
+              (0 = primeira, 1 = segunda, 2 = terceira...)
+     valor:   peso da questão (pode omitir; padrão 1)
+     imagem:  opcional, "https://..." para ilustrar a questão
+  ------------------------------------------------------------ */
+  questoes: [
+    {
+      enunciado: "Qual atributo da tag <form> define o endereço para onde os dados preenchidos serão enviados?",
+      alternativas: ["method", "target", "action", "enctype", "name"],
+      correta: 2
+    },
+    {
+      enunciado: "Observe o formulário abaixo. Se o usuário digitar \"html\" no campo e clicar em Buscar, qual endereço o navegador vai acessar?",
+      codigo: '<form action="/busca" method="get">\n  <input type="text" name="q">\n  <button type="submit">Buscar</button>\n</form>',
+      alternativas: [
+        "/busca?q=html",
+        "/busca?texto=html",
+        "/busca#q=html",
+        "/busca (o valor vai escondido no corpo da requisição)",
+        "/busca?html"
+      ],
+      correta: 0
+    },
+    {
+      enunciado: "Qual é a principal diferença entre os métodos GET e POST no envio de um formulário?",
+      alternativas: [
+        "GET envia os dados no corpo da requisição; POST envia na URL",
+        "GET envia os dados visíveis na URL; POST envia no corpo da requisição",
+        "GET só funciona com formulários de login; POST com qualquer formulário",
+        "GET criptografa os dados automaticamente; POST não",
+        "Não há diferença: os dois enviam da mesma forma"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "No código abaixo, o campo de e-mail NÃO chega ao servidor quando o formulário é enviado. Qual é o motivo?",
+      codigo: '<form action="/cadastro" method="post">\n  <input type="email" id="email" placeholder="Seu e-mail">\n  <button type="submit">Cadastrar</button>\n</form>',
+      alternativas: [
+        "Falta o atributo name no campo",
+        "O type=\"email\" não é aceito pelo método post",
+        "Falta o atributo value no campo",
+        "O placeholder substitui o envio do dado",
+        "Falta o atributo required no campo"
+      ],
+      correta: 0
+    },
+    {
+      enunciado: "Para associar corretamente um <label> a um campo do formulário, o atributo for do label deve ter o mesmo valor de qual atributo do campo?",
+      alternativas: ["name", "class", "id", "value", "type"],
+      correta: 2
+    },
+    {
+      enunciado: "Analise o trecho abaixo. Qual problema ele apresenta na hora de o usuário responder?",
+      codigo: '<input type="radio" name="turno1" value="manha"> Manhã\n<input type="radio" name="turno2" value="tarde"> Tarde\n<input type="radio" name="turno3" value="noite"> Noite',
+      alternativas: [
+        "As três opções podem ser marcadas ao mesmo tempo, porque os name são diferentes",
+        "Nenhuma opção pode ser marcada, porque falta o atributo id",
+        "Os botões aparecem como caixas de seleção quadradas",
+        "O formulário não envia nada, porque falta o atributo checked",
+        "Só a primeira opção funciona; as outras são ignoradas pelo navegador"
+      ],
+      correta: 0
+    },
+    {
+      enunciado: "Um formulário precisa permitir o envio de um arquivo (upload). Além do campo <input type=\"file\">, qual atributo é obrigatório na tag <form> para que o arquivo seja transmitido corretamente?",
+      alternativas: [
+        "method=\"get\"",
+        "enctype=\"multipart/form-data\"",
+        "accept=\"file\"",
+        "target=\"_blank\"",
+        "autocomplete=\"off\""
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "O que o atributo required faz em um campo de formulário?",
+      alternativas: [
+        "Deixa o campo com a borda vermelha permanentemente",
+        "Preenche o campo automaticamente com um valor padrão",
+        "Impede o envio do formulário enquanto o campo estiver vazio",
+        "Bloqueia a edição do campo pelo usuário",
+        "Envia o campo em uma requisição separada"
+      ],
+      correta: 2
+    },
+    {
+      enunciado: "O usuário abre a página com o código abaixo e clica em Enviar sem digitar nada. O que é enviado no campo nome?",
+      codigo: '<input type="text" name="nome" placeholder="Digite seu nome completo">',
+      alternativas: [
+        "O texto \"Digite seu nome completo\"",
+        "A palavra \"placeholder\"",
+        "Um valor vazio, pois o placeholder é apenas uma dica visual",
+        "O valor null, que gera erro no servidor",
+        "Nada, pois o campo é ignorado quando está vazio"
+      ],
+      correta: 2
+    },
+    {
+      enunciado: "Como se define o texto que já aparece escrito dentro de uma <textarea>?",
+      alternativas: [
+        "No atributo value da tag",
+        "Entre a tag de abertura e a de fechamento",
+        "No atributo placeholder, obrigatoriamente",
+        "No atributo text da tag",
+        "Só é possível por meio de JavaScript"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "Analise o campo abaixo. Qual valor digitado pelo usuário será aceito pelo navegador na validação?",
+      codigo: '<input type="number" name="idade" min="18" max="65" step="1">',
+      alternativas: ["17", "18", "70", "18,5", "dezoito"],
+      correta: 1
+    },
+    {
+      enunciado: "Qual é a função do atributo multiple em um <select>?",
+      alternativas: [
+        "Exibir a lista com várias colunas",
+        "Repetir o campo várias vezes na página",
+        "Permitir que o usuário selecione mais de uma opção",
+        "Permitir que o formulário seja enviado várias vezes",
+        "Criar automaticamente um <optgroup>"
+      ],
+      correta: 2
+    },
+    {
+      enunciado: "No código abaixo, qual opção aparece já selecionada quando a página é carregada?",
+      codigo: '<select name="curso">\n  <option value="info">Informática</option>\n  <option value="adm" selected>Administração</option>\n  <option value="edif">Edificações</option>\n</select>',
+      alternativas: ["Informática", "Administração", "Edificações", "Nenhuma, o campo inicia vazio", "As três, porque falta o atributo multiple"],
+      correta: 1
+    },
+    {
+      enunciado: "Qual a diferença prática entre os atributos readonly e disabled em um campo de formulário?",
+      alternativas: [
+        "Não há diferença: os dois bloqueiam a edição e o envio",
+        "readonly bloqueia a edição mas o valor é enviado; disabled bloqueia a edição e o valor NÃO é enviado",
+        "readonly esconde o campo; disabled apenas o deixa cinza",
+        "readonly só funciona em textarea; disabled só funciona em input",
+        "disabled bloqueia a edição mas o valor é enviado; readonly não envia nada"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "Analise o formulário. O usuário marca apenas a opção \"Português\" e envia. O que chega ao servidor?",
+      codigo: '<input type="checkbox" name="idiomas" value="pt"> Português\n<input type="checkbox" name="idiomas" value="en"> Inglês\n<input type="checkbox" name="idiomas" value="es"> Espanhol',
+      alternativas: [
+        "idiomas=pt, e as caixas desmarcadas não são enviadas",
+        "idiomas=pt, idiomas=off, idiomas=off",
+        "idiomas=pt,en,es com as três marcadas como falso",
+        "Nada, porque falta o atributo checked",
+        "idiomas=on, sem informar qual foi marcada"
+      ],
+      correta: 0
+    },
+    {
+      enunciado: "Qual par de tags é usado para agrupar campos relacionados e dar um título visível a esse grupo?",
+      alternativas: [
+        "<group> e <title>",
+        "<div> e <h3>",
+        "<fieldset> e <legend>",
+        "<section> e <caption>",
+        "<form> e <label>"
+      ],
+      correta: 2
+    },
+    {
+      enunciado: "Observe o campo abaixo. Qual valor digitado passa na validação do atributo pattern?",
+      codigo: '<input type="text" name="cep" pattern="[0-9]{5}-[0-9]{3}" required>',
+      alternativas: ["01310100", "01310-100", "0131-0100", "013101-00", "CEP 01310-100"],
+      correta: 1
+    },
+    {
+      enunciado: "O que acontece quando o usuário clica no botão do formulário abaixo?",
+      codigo: '<form action="/salvar" method="post">\n  <input type="text" name="titulo">\n  <button>Gravar</button>\n</form>',
+      alternativas: [
+        "Nada, porque falta type=\"submit\" no botão",
+        "O formulário é enviado, pois submit é o comportamento padrão do <button> dentro de um <form>",
+        "O formulário é limpo, pois reset é o comportamento padrão",
+        "O navegador exibe um erro de sintaxe",
+        "O botão só funciona se houver JavaScript na página"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "Para que serve o campo <input type=\"hidden\">?",
+      alternativas: [
+        "Esconder um campo até que o usuário clique em um botão",
+        "Enviar um dado junto com o formulário sem exibi-lo na tela para o usuário",
+        "Ocultar os caracteres digitados, como em uma senha",
+        "Impedir que o campo seja enviado ao servidor",
+        "Guardar dados criptografados de forma segura"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "Sobre o campo <input type=\"password\">, qual afirmação está correta?",
+      alternativas: [
+        "Ele criptografa a senha antes de enviá-la ao servidor",
+        "Ele apenas oculta os caracteres na tela; o valor trafega como texto comum se o site não usar HTTPS",
+        "Ele impede que a senha seja enviada por GET, por segurança",
+        "Ele valida automaticamente se a senha tem no mínimo 8 caracteres",
+        "Ele armazena a senha no navegador de forma segura"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "No trecho abaixo, o que acontece quando o usuário clica sobre a palavra \"Nome:\"?",
+      codigo: '<label>Nome: <input type="text" name="nome"></label>',
+      alternativas: [
+        "Nada, porque falta o atributo for no label",
+        "O cursor vai para dentro do campo de texto, pois a associação é implícita",
+        "O formulário é enviado",
+        "O texto \"Nome:\" é apagado",
+        "O navegador exibe um erro, porque input não pode ficar dentro de label"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "Qual é a função de <input type=\"reset\">?",
+      alternativas: [
+        "Enviar o formulário e recarregar a página",
+        "Devolver os campos aos valores iniciais, sem enviar o formulário",
+        "Apagar os dados já gravados no servidor",
+        "Recarregar a página descartando o cache",
+        "Cancelar o envio que já está em andamento"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "Analise o código abaixo. O que o usuário consegue fazer neste campo?",
+      codigo: '<input type="text" name="navegador" list="opcoes">\n<datalist id="opcoes">\n  <option value="Chrome">\n  <option value="Firefox">\n  <option value="Edge">\n</datalist>',
+      alternativas: [
+        "Escolher apenas entre Chrome, Firefox e Edge",
+        "Ver as três opções como sugestão, mas também digitar um valor diferente",
+        "Selecionar várias opções ao mesmo tempo",
+        "Nada: datalist só funciona junto com <select>",
+        "Apenas digitar livremente; as sugestões não aparecem"
+      ],
+      correta: 1
+    },
+    {
+      enunciado: "Qual tipo de campo faz o navegador verificar sozinho se o texto digitado tem o formato de um endereço eletrônico válido?",
+      alternativas: [
+        "<input type=\"text\">",
+        "<input type=\"mail\">",
+        "<input type=\"email\">",
+        "<input type=\"address\">",
+        "<input type=\"contact\">"
+      ],
+      correta: 2
+    },
+    {
+      enunciado: "Por que usar <label> corretamente associado aos campos é considerado boa prática de acessibilidade?",
+      alternativas: [
+        "Porque deixa o formulário mais colorido",
+        "Porque reduz o tamanho do arquivo HTML",
+        "Porque o leitor de tela anuncia a descrição do campo e a área clicável fica maior",
+        "Porque substitui a necessidade do atributo name",
+        "Porque criptografa o conteúdo digitado pelo usuário"
+      ],
+      correta: 2
+    }
+  ]
+};
+</script>
+
+
+<!-- ============================================================
+     PARTE 2 — MOTOR DA PROVA (não precisa alterar)
+     ============================================================ -->
+
+<div id="topo" class="top hidden">
+  <span class="id" id="topoNome"></span>
+  <span class="timer hidden" id="topoTimer">--:--</span>
+  <div class="barra" style="flex-basis:100%"><div id="topoBarra"></div></div>
+</div>
+
+<div class="wrap">
+  <!-- ---------- TELA 1: ENTRADA ---------- -->
+  <section id="telaInicio">
+    <div class="card" style="padding:26px 22px">
+      <p class="tiny mut" style="letter-spacing:.1em;text-transform:uppercase;font-weight:800;margin:0" id="inDisc"></p>
+      <h1 id="inTitulo" style="margin-top:6px"></h1>
+      <p class="mut small" id="inProf" style="margin-top:4px"></p>
+
+      <div class="aviso info" id="inRegras"></div>
+
+      <form id="formEntrada" autocomplete="off">
+        <label for="cNome">Nome completo</label>
+        <input id="cNome" required placeholder="Digite seu nome como está na chamada" autocapitalize="words">
+
+        <label for="cTurma">Turma</label>
+        <select id="cTurma" required></select>
+
+        <div id="boxSenha" class="hidden">
+          <label for="cSenha">Código de acesso</label>
+          <input id="cSenha" placeholder="Código ditado pelo professor" autocapitalize="characters">
+        </div>
+
+        <p id="erroEntrada" class="aviso err hidden"></p>
+
+        <button class="btn" type="submit" style="margin-top:22px">Iniciar prova</button>
+        <p class="tiny mut center" style="margin-top:12px">Ao iniciar, o cronômetro começa a contar e não pode ser pausado.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ---------- TELA 2: PROVA ---------- -->
+  <section id="telaProva" class="hidden">
+    <div id="areaQuestao"></div>
+
+    <div class="row" style="margin-top:18px">
+      <button class="btn-ghost" id="btnAnt">← Anterior</button>
+      <button class="btn-ghost" id="btnProx">Próxima →</button>
+    </div>
+
+    <div class="card" style="padding:18px 20px;margin-top:18px">
+      <h2>Mapa da prova</h2>
+      <p class="tiny mut" style="margin:2px 0 0">Toque no número para ir direto à questão. As preenchidas ficam destacadas.</p>
+      <div class="grade" id="grade"></div>
+      <p class="small mut center" id="contador" style="margin-top:14px"></p>
+      <button class="btn" id="btnFinalizar" style="margin-top:6px">Finalizar e enviar</button>
+    </div>
+  </section>
+
+  <!-- ---------- TELA 3: RESULTADO ---------- -->
+  <section id="telaFim" class="hidden">
+    <div class="card center" style="padding:30px 22px">
+      <div id="fimConteudo"></div>
+    </div>
+    <div id="fimGabarito"></div>
+  </section>
+</div>
+
+<!-- ---------- MODAL DE CONFIRMAÇÃO ---------- -->
+<div class="modal hidden" id="modal">
+  <div class="card">
+    <h2 id="modalTitulo">Finalizar prova?</h2>
+    <p class="small mut" id="modalTexto"></p>
+    <div class="row" style="margin-top:20px">
+      <button class="btn-ghost" id="modalNao">Voltar</button>
+      <button class="btn" id="modalSim" style="flex:1.4">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- utilidades ---------- */
+const $  = s => document.querySelector(s);
+const LETRAS = "ABCDEFGHIJ";
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* Armazenamento tolerante: se o navegador bloquear, cai para memória. */
+const mem = {};
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?? null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){ delete mem[k]; } }
+};
+
+const embaralhar = arr => {
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+};
+
+const CHAVE = "prova_" + (CONFIG.titulo || "x").replace(/\W+/g,"_").toLowerCase();
+
+/* ---------- estado ---------- */
+let prova = null;          // questões já embaralhadas para este aluno
+let respostas = [];        // índice da alternativa escolhida (na ordem exibida) ou null
+let atual = 0;
+let aluno = { nome:"", turma:"" };
+let inicioEm = 0, fimEm = 0, tickTimer = null, enviando = false, saidasDaAba = 0;
+
+/* ============================================================
+   TELA 1 — ENTRADA
+   ============================================================ */
+function montarEntrada(){
+  $("#inDisc").textContent   = CONFIG.disciplina || "";
+  $("#inTitulo").textContent = CONFIG.titulo || "Avaliação";
+  $("#inProf").textContent   = CONFIG.professor || "";
+  document.title = (CONFIG.titulo||"Avaliação") + " — " + (CONFIG.disciplina||"");
+
+  const sel = $("#cTurma");
+  sel.innerHTML = '<option value="" disabled selected>Selecione sua turma</option>' +
+    (CONFIG.turmas||[]).map(t => `<option>${esc(t)}</option>`).join("");
+
+  const n = CONFIG.questoes.length;
+  const regras = [
+    `<strong>${n}</strong> ${n===1?"questão":"questões"} de múltipla escolha`,
+    CONFIG.duracaoMinutos > 0 ? `<strong>${CONFIG.duracaoMinutos} minutos</strong> de duração` : "sem limite de tempo",
+    "envio único — depois de finalizar não dá para refazer"
+  ];
+  if(CONFIG.embaralharQuestoes) regras.push("a ordem das questões muda para cada aluno");
+  $("#inRegras").innerHTML = "Antes de começar: " + regras.join(" · ") + ".";
+
+  if(CONFIG.senha) $("#boxSenha").classList.remove("hidden");
+
+  /* já respondeu neste aparelho? */
+  const feito = store.get(CHAVE + "_enviado");
+  if(feito){
+    try{
+      const d = JSON.parse(feito);
+      $("#formEntrada").innerHTML =
+        `<div class="aviso ok" style="margin-top:18px">Esta prova já foi enviada por <strong>${esc(d.nome)}</strong>.<br>
+         Protocolo: <strong>${esc(d.protocolo)}</strong></div>
+         <p class="tiny mut center" style="margin-top:12px">Se você não é essa pessoa, avise o professor.</p>`;
+    }catch(e){ store.del(CHAVE + "_enviado"); }
+  }
+}
+
+$("#formEntrada").addEventListener("submit", e => {
+  e.preventDefault();
+  const nome  = $("#cNome").value.trim();
+  const turma = $("#cTurma").value;
+  const erro  = $("#erroEntrada");
+  erro.classList.add("hidden");
+
+  if(nome.split(/\s+/).length < 2){
+    erro.textContent = "Digite seu nome completo (nome e sobrenome).";
+    erro.classList.remove("hidden"); return;
+  }
+  if(CONFIG.senha && $("#cSenha").value.trim().toUpperCase() !== String(CONFIG.senha).toUpperCase()){
+    erro.textContent = "Código de acesso incorreto.";
+    erro.classList.remove("hidden"); return;
+  }
+  aluno = { nome, turma };
+  iniciarProva();
+});
+
+/* ============================================================
+   TELA 2 — PROVA
+   ============================================================ */
+function iniciarProva(){
+  /* prepara as questões (com embaralhamento por aluno) */
+  const base = CONFIG.questoes.map((q,i) => {
+    const alts = q.alternativas.map((texto,idx) => ({ texto, correta: idx === q.correta }));
+    return {
+      original: i + 1,
+      enunciado: q.enunciado,
+      imagem: q.imagem || null,
+      codigo: q.codigo || null,
+      valor: q.valor == null ? 1 : q.valor,
+      alternativas: CONFIG.embaralharAlternativas ? embaralhar(alts) : alts
+    };
+  });
+  prova = CONFIG.embaralharQuestoes ? embaralhar(base) : base;
+  respostas = new Array(prova.length).fill(null);
+  atual = 0;
+
+  /* retoma rascunho, se a página tiver recarregado no meio da prova */
+  const rasc = store.get(CHAVE + "_rascunho");
+  if(rasc){
+    try{
+      const d = JSON.parse(rasc);
+      if(d.nome === aluno.nome && Array.isArray(d.respostas) && d.respostas.length === prova.length){
+        prova = d.prova; respostas = d.respostas; inicioEm = d.inicioEm; atual = d.atual || 0;
+      }
+    }catch(e){}
+  }
+  if(!inicioEm) inicioEm = Date.now();
+  fimEm = CONFIG.duracaoMinutos > 0 ? inicioEm + CONFIG.duracaoMinutos*60000 : 0;
+
+  $("#telaInicio").classList.add("hidden");
+  $("#telaProva").classList.remove("hidden");
+  $("#topo").classList.remove("hidden");
+  $("#topoNome").textContent = aluno.nome.split(" ")[0] + " · " + aluno.turma;
+  if(fimEm){ $("#topoTimer").classList.remove("hidden"); tick(); tickTimer = setInterval(tick, 1000); }
+
+  window.addEventListener("beforeunload", avisarSaida);
+  if(CONFIG.registrarTrocaDeAba){
+    document.addEventListener("visibilitychange", () => { if(document.hidden) saidasDaAba++; });
+  }
+  render();
+}
+
+function avisarSaida(e){ if(!enviando){ e.preventDefault(); e.returnValue = ""; } }
+
+function tick(){
+  const resta = Math.max(0, fimEm - Date.now());
+  const m = Math.floor(resta/60000), s = Math.floor((resta%60000)/1000);
+  const el = $("#topoTimer");
+  el.textContent = String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+  el.className = "timer" + (resta <= 60000 ? " critico" : resta <= 300000 ? " alerta" : "");
+  if(resta <= 0){ clearInterval(tickTimer); finalizar(true); }
+}
+
+function render(){
+  const q = prova[atual];
+  $("#areaQuestao").innerHTML = `
+    <article class="card q">
+      <div class="num">Questão ${atual+1} de ${prova.length}</div>
+      <div class="enun">${esc(q.enunciado)}</div>
+      ${q.imagem ? `<img src="${esc(q.imagem)}" alt="">` : ""}
+      ${q.codigo ? `<pre>${esc(q.codigo)}</pre>` : ""}
+      <div class="alts">
+        ${q.alternativas.map((a,i) => `
+          <label class="alt${respostas[atual]===i?" sel":""}" data-i="${i}">
+            <span class="letra">${LETRAS[i]}</span>
+            <span class="txt">${esc(a.texto)}</span>
+          </label>`).join("")}
+      </div>
+    </article>`;
+
+  $("#areaQuestao").querySelectorAll(".alt").forEach(el => {
+    el.addEventListener("click", () => {
+      respostas[atual] = Number(el.dataset.i);
+      salvarRascunho();
+      render();
+      if(atual < prova.length - 1) setTimeout(() => { atual++; render(); scrollTo({top:0,behavior:"smooth"}); }, 220);
+    });
+  });
+
+  $("#grade").innerHTML = prova.map((_,i) =>
+    `<button class="gbtn${respostas[i]!==null?" feita":""}${i===atual?" atual":""}" data-i="${i}">${i+1}</button>`
+  ).join("");
+  $("#grade").querySelectorAll(".gbtn").forEach(b => {
+    b.addEventListener("click", () => { atual = Number(b.dataset.i); render(); scrollTo({top:0,behavior:"smooth"}); });
+  });
+
+  const feitas = respostas.filter(r => r !== null).length;
+  $("#contador").innerHTML = `<strong>${feitas}</strong> de <strong>${prova.length}</strong> respondidas`;
+  $("#topoBarra").style.width = (feitas/prova.length*100) + "%";
+  $("#btnAnt").disabled  = atual === 0;
+  $("#btnProx").disabled = atual === prova.length - 1;
+}
+
+$("#btnAnt").onclick  = () => { if(atual>0){ atual--; render(); scrollTo({top:0,behavior:"smooth"}); } };
+$("#btnProx").onclick = () => { if(atual<prova.length-1){ atual++; render(); scrollTo({top:0,behavior:"smooth"}); } };
+
+function salvarRascunho(){
+  store.set(CHAVE + "_rascunho", JSON.stringify({ nome:aluno.nome, prova, respostas, inicioEm, atual }));
+}
+
+/* ---------- confirmação ---------- */
+$("#btnFinalizar").onclick = () => {
+  const branco = respostas.filter(r => r === null).length;
+  if(branco && CONFIG.exigirTodasRespondidas){
+    alert(`Ainda faltam ${branco} ${branco===1?"questão":"questões"}. Responda todas antes de enviar.`);
+    return;
+  }
+  $("#modalTexto").innerHTML = branco
+    ? `Você deixou <strong>${branco}</strong> ${branco===1?"questão em branco":"questões em branco"}. Depois de enviar não é possível alterar.`
+    : "Todas as questões estão respondidas. Depois de enviar não é possível alterar.";
+  $("#modal").classList.remove("hidden");
+};
+$("#modalNao").onclick = () => $("#modal").classList.add("hidden");
+$("#modalSim").onclick = () => { $("#modal").classList.add("hidden"); finalizar(false); };
+
+/* ============================================================
+   CORREÇÃO E ENVIO
+   ============================================================ */
+function corrigir(){
+  let acertos = 0, pontos = 0, total = 0;
+  const detalhe = prova.map((q,i) => {
+    total += q.valor;
+    const escolhida = respostas[i];
+    const certa = escolhida !== null && q.alternativas[escolhida].correta;
+    if(certa){ acertos++; pontos += q.valor; }
+    return {
+      questao: q.original,
+      marcada: escolhida === null ? "-" : LETRAS[escolhida],
+      texto: escolhida === null ? "(em branco)" : q.alternativas[escolhida].texto,
+      certa
+    };
+  });
+  return { acertos, pontos, total, nota: total ? +(pontos/total*10).toFixed(1) : 0, detalhe };
+}
+
+function gerarProtocolo(){
+  const s = aluno.nome + aluno.turma + inicioEm + Date.now();
+  let h = 0;
+  for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) >>> 0; }
+  return h.toString(36).toUpperCase().padStart(6,"0").slice(-6);
+}
+
+async function finalizar(porTempo){
+  if(enviando) return;
+  enviando = true;
+  clearInterval(tickTimer);
+  window.removeEventListener("beforeunload", avisarSaida);
+
+  const r = corrigir();
+  const protocolo = gerarProtocolo();
+  const duracao = Math.round((Date.now() - inicioEm)/1000);
+
+  const envio = {
+    protocolo,
+    nome: aluno.nome,
+    turma: aluno.turma,
+    disciplina: (CONFIG.disciplinaPorTurma && CONFIG.disciplinaPorTurma[aluno.turma]) || CONFIG.disciplina,
+    prova: CONFIG.titulo,
+    acertos: r.acertos,
+    totalQuestoes: prova.length,
+    nota: r.nota,
+    duracaoSegundos: duracao,
+    encerradaPorTempo: !!porTempo,
+    saidasDaAba,
+    enviadoEm: new Date().toISOString(),
+    respostas: r.detalhe.map(d => `${d.questao}:${d.marcada}${d.certa?"✓":"✗"}`).join(" | ")
+  };
+
+  $("#topo").classList.add("hidden");
+  $("#telaProva").classList.add("hidden");
+  $("#telaFim").classList.remove("hidden");
+  scrollTo({top:0});
+
+  mostrarResultado(r, envio, porTempo, "enviando");
+  const ok = await enviarPlanilha(envio);
+  mostrarResultado(r, envio, porTempo, ok === null ? "local" : ok ? "ok" : "falhou");
+
+  store.del(CHAVE + "_rascunho");
+  store.set(CHAVE + "_enviado", JSON.stringify({ nome: aluno.nome, protocolo }));
+}
+
+async function enviarPlanilha(dados){
+  if(!CONFIG.urlPlanilha) return null;   // sem planilha configurada
+  for(let tentativa = 1; tentativa <= 3; tentativa++){
+    try{
+      // text/plain evita o "preflight" do navegador, que o Apps Script não responde
+      const resp = await fetch(CONFIG.urlPlanilha, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(dados),
+        redirect: "follow"
+      });
+      if(resp.ok) return true;
+    }catch(e){
+      if(tentativa === 3){
+        // última tentativa: envio às cegas, que funciona mesmo sem CORS
+        try{
+          await fetch(CONFIG.urlPlanilha, {
+            method:"POST", mode:"no-cors",
+            headers:{ "Content-Type":"text/plain;charset=utf-8" },
+            body: JSON.stringify(dados)
+          });
+          return true;
+        }catch(e2){}
+      }
+      await new Promise(r => setTimeout(r, 800 * tentativa));
+    }
+  }
+  return false;
+}
+
+/* ============================================================
+   TELA 3 — RESULTADO
+   ============================================================ */
+function mostrarResultado(r, envio, porTempo, status){
+  const statusHtml =
+    status === "enviando" ? `<div class="aviso info">Enviando suas respostas…</div>` :
+    status === "ok"       ? `<div class="aviso ok">Respostas registradas com sucesso.</div>` :
+    status === "falhou"   ? `<div class="aviso err">Não foi possível registrar automaticamente.
+                              <strong>Mostre o protocolo abaixo ao professor antes de sair.</strong></div>` :
+    status === "local"    ? `<div class="aviso warn">Modo de teste: a planilha ainda não foi configurada,
+                              então esta prova <strong>não foi gravada</strong> em lugar nenhum.</div>` : "";
+
+  const notaHtml = CONFIG.mostrarNotaNaHora
+    ? `<p class="small mut" style="margin-top:18px">Sua nota</p>
+       <div class="nota" style="color:${r.nota>=6?"var(--ok)":"var(--err)"}">${r.nota.toFixed(1)}</div>
+       <p class="small mut">${r.acertos} de ${prova.length} ${prova.length===1?"questão":"questões"}</p>`
+    : `<div class="aviso info" style="margin-top:18px">Sua prova foi entregue. O professor divulgará as notas depois da correção.</div>`;
+
+  $("#fimConteudo").innerHTML = `
+    <h1>Prova entregue</h1>
+    <p class="mut small">${esc(aluno.nome)} · ${esc(aluno.turma)}</p>
+    ${porTempo ? `<div class="aviso warn">O tempo acabou e a prova foi enviada automaticamente.</div>` : ""}
+    ${notaHtml}
+    <p class="small mut" style="margin-top:24px">Protocolo de entrega</p>
+    <div class="protocolo">${esc(envio.protocolo)}</div>
+    <p class="tiny mut" style="margin-top:10px">Anote ou mostre este código ao professor.</p>
+    ${statusHtml}`;
+
+  if(CONFIG.mostrarGabarito && status !== "enviando"){
+    $("#fimGabarito").innerHTML = `
+      <div class="card" style="padding:20px;margin-top:18px">
+        <h2>Gabarito</h2>
+        ${r.detalhe.map(d => `
+          <div class="alt ${d.certa?"certa":"errada"}" style="margin-top:9px;cursor:default">
+            <span class="letra">${d.certa?"✓":"✗"}</span>
+            <span class="txt"><strong>Questão ${d.questao}</strong> — você marcou: ${esc(d.texto)}</span>
+          </div>`).join("")}
+      </div>`;
+  }
+}
+
+montarEntrada();
+})();
+</script>
+</body>
+</html>

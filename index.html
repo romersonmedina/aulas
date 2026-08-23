@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Portal de Aulas</title>
+<meta name="description" content="Materiais, atividades e avaliações online.">
+<style>
+:root{
+  --bg:#f1f5f9; --bg2:#ffffff; --line:#e2e8f0; --txt:#0f172a; --mut:#64748b;
+  --brand:#0f766e; --brand-soft:#ccfbf1; --accent:#7c3aed; --accent-soft:#ede9fe;
+  --shadow:0 1px 3px rgba(15,23,42,.07),0 10px 30px rgba(15,23,42,.06); --r:16px;
+}
+html[data-tema="escuro"]{
+  --bg:#0b1220; --bg2:#111c2e; --line:#1e293b; --txt:#e2e8f0; --mut:#94a3b8;
+  --brand:#2dd4bf; --brand-soft:#134e4a; --accent:#a78bfa; --accent-soft:#2e1065;
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;background:var(--bg);color:var(--txt);line-height:1.55;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  transition:background .25s,color .25s;
+}
+a{color:inherit;text-decoration:none}
+h1,h2,h3{margin:0;line-height:1.2}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px}
+
+/* ---------- CABEÇALHO ---------- */
+header{
+  position:relative;overflow:hidden;background:var(--bg2);
+  border-bottom:1px solid var(--line);padding:46px 0 62px
+}
+header::before,header::after{
+  content:"";position:absolute;border-radius:50%;filter:blur(90px);opacity:.35;pointer-events:none
+}
+header::before{width:380px;height:380px;background:var(--brand);top:-160px;right:-90px}
+header::after{width:280px;height:280px;background:var(--accent);top:-40px;left:-90px}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:7px;font-size:.7rem;font-weight:850;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--brand);
+  background:var(--brand-soft);padding:6px 13px;border-radius:999px
+}
+header h1{font-size:clamp(1.7rem,5.5vw,2.9rem);font-weight:900;letter-spacing:-.03em;margin-top:14px}
+header h1 span{color:var(--brand)}
+header p{color:var(--mut);margin:10px 0 0;font-weight:500}
+.tema{
+  position:absolute;top:18px;right:18px;z-index:5;width:42px;height:42px;border-radius:50%;
+  border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:1.1rem;cursor:pointer
+}
+.tema:hover{border-color:var(--brand)}
+
+main{padding-bottom:70px}
+section{margin-top:44px}
+.titulo{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.titulo h2{
+  font-size:.78rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;
+  padding:8px 15px;border-left:4px solid var(--brand);background:var(--bg2);border-radius:8px;white-space:nowrap
+}
+.titulo .linha{height:1px;flex:1;background:var(--line)}
+
+/* ---------- CARTÕES ---------- */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.card{
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:20px;display:block;transition:.18s
+}
+a.card:hover{transform:translateY(-3px);border-color:var(--brand)}
+.card .ic{font-size:1.7rem;line-height:1}
+.card h3{font-size:1.02rem;font-weight:750;margin-top:10px}
+.card p{margin:4px 0 0;font-size:.86rem;color:var(--mut)}
+
+/* destaque */
+.destaque{
+  position:relative;overflow:hidden;padding:30px 26px;border-radius:22px;
+  background:var(--bg2);border:1px solid var(--line);box-shadow:var(--shadow);display:block
+}
+.destaque::after{
+  content:"";position:absolute;width:300px;height:300px;border-radius:50%;
+  background:var(--accent);filter:blur(90px);opacity:.22;top:-110px;right:-70px;pointer-events:none
+}
+.destaque .in{position:relative;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.destaque .ic{
+  width:74px;height:74px;flex:none;border-radius:20px;background:var(--accent-soft);
+  display:grid;place-items:center;font-size:2.1rem
+}
+.destaque h3{font-size:1.35rem;font-weight:850;letter-spacing:-.02em}
+.destaque p{color:var(--mut);margin:6px 0 0;max-width:52ch}
+.pill{
+  display:inline-block;margin-top:14px;background:var(--brand);color:var(--bg2);
+  padding:10px 20px;border-radius:999px;font-weight:750;font-size:.9rem
+}
+
+/* turmas (sanfona) */
+.turma{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+.turma>button{
+  width:100%;background:none;border:0;padding:18px 20px;display:flex;align-items:center;gap:12px;
+  cursor:pointer;color:var(--txt);font:inherit;font-weight:800;font-size:1.05rem;text-align:left
+}
+.turma>button .cont{margin-left:auto;font-size:.78rem;font-weight:700;color:var(--mut)}
+.turma>button .seta{transition:.25s;color:var(--mut)}
+.turma.aberta>button .seta{transform:rotate(180deg)}
+.turma .corpo{display:none;padding:0 16px 16px}
+.turma.aberta .corpo{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.disc{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--bg)}
+.disc h3{font-size:.98rem;font-weight:750;display:flex;gap:9px;align-items:center}
+.disc .links{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.disc .links a{
+  font-size:.85rem;font-weight:650;color:var(--brand);
+  display:flex;align-items:center;gap:6px;padding:6px 0
+}
+.disc .links a:hover{text-decoration:underline}
+
+/* avaliações */
+a.prova{
+  display:flex;align-items:center;gap:14px;padding:17px 20px;background:var(--bg2);
+  border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;
+  box-shadow:var(--shadow);margin-bottom:10px;transition:.16s;font-weight:700
+}
+a.prova:hover{transform:translateX(4px);border-left-color:var(--accent)}
+a.prova .tag{
+  margin-left:auto;font-size:.7rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--brand-soft);color:var(--brand);padding:5px 11px;border-radius:999px;white-space:nowrap
+}
+a.prova .tag.fechada{background:var(--line);color:var(--mut)}
+
+footer{border-top:1px solid var(--line);padding:26px 0;text-align:center;color:var(--mut);font-size:.83rem;margin-top:56px}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     CONFIGURAÇÃO — é só aqui que você mexe
+     ============================================================ -->
+<script>
+const SITE = {
+  professor: "Prof. Romerson Medina",
+  subtitulo: "Desenvolvimento Web · materiais, práticas e avaliações online",
+  selo: "Portal do aluno",
+  rodape: "Portal de aulas · Prof. Romerson Medina",
+
+  /* Cartão grande do topo. Deixe destaque:null para esconder a seção. */
+  destaque: {
+    icone: "📝",
+    titulo: "Avaliação de Formulários em HTML",
+    texto: "25 questões · 100 minutos · você precisa do código de acesso que o professor dita na hora.",
+    botao: "Fazer a prova",
+    url: "prova-formularios.html"
+  },
+
+  /* Avaliações online. status: "aberta" | "fechada" | "" */
+  avaliacoes: [
+    { nome: "Formulários em HTML — 1ªIM01 e 2ªIM02", url: "prova-formularios.html", status: "aberta" }
+  ],
+
+  /* Disciplinas agrupadas por turma */
+  turmas: [
+    {
+      nome: "1ªIM01-EMI-IPI",
+      disciplinas: [
+        {
+          icone: "🌐", nome: "Introdução ao Desenvolvimento Web",
+          links: [
+            { nome: "Conteúdo das aulas", url: "#" },
+            { nome: "Atividades práticas", url: "#" }
+          ]
+        }
+      ]
+    },
+    {
+      nome: "2ªIM02-EMI-IPI",
+      disciplinas: [
+        {
+          icone: "📱", nome: "Aplicativos Web",
+          links: [
+            { nome: "Conteúdo das aulas", url: "#" },
+            { nome: "Atividades práticas", url: "#" }
+          ]
+        },
+        {
+          icone: "⌨️", nome: "Linguagem de Programação Aplicada à Web",
+          links: [
+            { nome: "Conteúdo das aulas", url: "#" },
+            { nome: "Atividades práticas", url: "#" }
+          ]
+        }
+      ]
+    }
+  ],
+
+  /* Materiais soltos, que valem para todas as turmas */
+  materiais: [
+    { icone: "📁", nome: "Materiais de apoio",    desc: "Apostilas e resumos",      url: "#" },
+    { icone: "🗓️", nome: "Calendário de provas",  desc: "Datas do bimestre",        url: "#" },
+    { icone: "🎥", nome: "Videoaulas",            desc: "Playlist das aulas",       url: "#" }
+  ]
+};
+</script>
+
+<header>
+  <button class="tema" id="btnTema" title="Alternar tema claro/escuro">🌙</button>
+  <div class="wrap" style="position:relative;z-index:2">
+    <span class="eyebrow" id="hSelo"></span>
+    <h1 id="hTitulo"></h1>
+    <p id="hSub"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="secDestaque" style="margin-top:-34px"></section>
+  <section id="secAvaliacoes"></section>
+  <section id="secTurmas"></section>
+  <section id="secMateriais"></section>
+</main>
+
+<footer><div class="wrap" id="rodape"></div></footer>
+
+<script>
+(function(){
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ext = u => /^https?:/i.test(u) ? ' target="_blank" rel="noopener"' : '';
+
+/* ---------- tema ---------- */
+const raiz = document.documentElement;
+let tema = "claro";
+try{ tema = localStorage.getItem("tema") || (matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro"); }catch(e){}
+aplicarTema(tema);
+$("#btnTema").onclick = () => {
+  tema = raiz.dataset.tema === "escuro" ? "claro" : "escuro";
+  aplicarTema(tema);
+  try{ localStorage.setItem("tema", tema); }catch(e){}
+};
+function aplicarTema(t){ raiz.dataset.tema = t; $("#btnTema").textContent = t === "escuro" ? "☀️" : "🌙"; }
+
+/* ---------- cabeçalho ---------- */
+$("#hSelo").textContent = SITE.selo || "";
+$("#hTitulo").innerHTML = esc(SITE.professor).replace(/^(\S+)/, '<span>$1</span>');
+$("#hSub").textContent = SITE.subtitulo || "";
+$("#rodape").textContent = SITE.rodape || "";
+document.title = SITE.professor + " — " + (SITE.subtitulo || "Portal de aulas");
+
+/* ---------- destaque ---------- */
+if(SITE.destaque){
+  const d = SITE.destaque;
+  $("#secDestaque").innerHTML = `
+    <a class="destaque" href="${esc(d.url)}"${ext(d.url)}>
+      <div class="in">
+        <div class="ic">${esc(d.icone||"✨")}</div>
+        <div>
+          <h3>${esc(d.titulo)}</h3>
+          <p>${esc(d.texto||"")}</p>
+          <span class="pill">${esc(d.botao||"Acessar")} →</span>
+        </div>
+      </div>
+    </a>`;
+}
+
+/* ---------- avaliações ---------- */
+if((SITE.avaliacoes||[]).length){
+  $("#secAvaliacoes").innerHTML = `
+    <div class="titulo"><h2>📝 Avaliações online</h2><div class="linha"></div></div>
+    ${SITE.avaliacoes.map(a => `
+      <a class="prova" href="${esc(a.url)}"${ext(a.url)}>
+        <span>${esc(a.nome)}</span>
+        ${a.status ? `<span class="tag ${a.status==="fechada"?"fechada":""}">${esc(a.status)}</span>` : ""}
+      </a>`).join("")}`;
+}
+
+/* ---------- turmas ---------- */
+if((SITE.turmas||[]).length){
+  $("#secTurmas").innerHTML = `
+    <div class="titulo"><h2>🎓 Turmas e disciplinas</h2><div class="linha"></div></div>
+    ${SITE.turmas.map((t,i) => `
+      <div class="turma${i===0?" aberta":""}">
+        <button type="button">
+          ${esc(t.nome)}
+          <span class="cont">${t.disciplinas.length} ${t.disciplinas.length===1?"disciplina":"disciplinas"}</span>
+          <span class="seta">▾</span>
+        </button>
+        <div class="corpo">
+          ${t.disciplinas.map(d => `
+            <div class="disc">
+              <h3><span>${esc(d.icone||"📘")}</span> ${esc(d.nome)}</h3>
+              <div class="links">
+                ${(d.links||[]).map(l => `<a href="${esc(l.url)}"${ext(l.url)}>→ ${esc(l.nome)}</a>`).join("")}
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>`).join("")}`;
+
+  document.querySelectorAll(".turma > button").forEach(b => {
+    b.onclick = () => b.parentElement.classList.toggle("aberta");
+  });
+}
+
+/* ---------- materiais ---------- */
+if((SITE.materiais||[]).length){
+  $("#secMateriais").innerHTML = `
+    <div class="titulo"><h2>📚 Materiais</h2><div class="linha"></div></div>
+    <div class="grid">
+      ${SITE.materiais.map(m => `
+        <a class="card" href="${esc(m.url)}"${ext(m.url)}>
+          <div class="ic">${esc(m.icone||"📄")}</div>
+          <h3>${esc(m.nome)}</h3>
+          <p>${esc(m.desc||"")}</p>
+        </a>`).join("")}
+    </div>`;
+}
+})();
+</script>
+</body>
+</html>
