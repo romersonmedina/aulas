@@ -253,12 +253,14 @@ const CONFIG = {
   telaCheia: true,           // abre em tela cheia ao iniciar (some a barra de abas)
   bloquearCopia: true,       // desliga copiar, colar e menu do botão direito
 
-  /* --- O que o aluno vê no fim --- */
-  mostrarNotaNaHora: true,
+  /* --- O que o aluno vê no fim ---
+     Como está: o aluno só vê "prova concluída" e o protocolo.
+     A nota e o gabarito ficam só com você (na planilha e no ?teste). */
+  mostrarNotaNaHora: false,
   mostrarGabarito: false,
 
   /* --- Planilha (Google Apps Script) --- */
-  urlPlanilha: "https://script.google.com/macros/s/AKfycbyLUhxlXtpJCtrOumGaA8Crd55ToFoPxm9-5S9H0Tsfr-B7X9hqnXUu5VTCnyGWrso5Gg/exec",           // cole aqui o link /exec do Apps Script
+  urlPlanilha: "",           // cole aqui o link /exec do Apps Script
   /* true = sem internet o aluno NÃO consegue começar (mais rígido, mais frágil).
      false = começa mesmo assim; a planilha registra que não deu para verificar. */
   bloquearSemVerificacao: false,
@@ -654,6 +656,11 @@ const CHAVE = "prova_" + (CONFIG.titulo || "x").replace(/\W+/g,"_").toLowerCase(
    mostra o gabarito no fim e marca o envio como TESTE na planilha. */
 const MODO_TESTE = /[?&]teste\b/i.test(location.search);
 
+/* ?teste&vigia — modo teste COM a vigilância de aba ligada, para você
+   conferir se o encerramento automático está funcionando de verdade. */
+const TESTAR_VIGILANCIA = MODO_TESTE && /[?&]vigia\b/i.test(location.search);
+const VIGIAR = CONFIG.encerrarAoSairDaAba && (!MODO_TESTE || TESTAR_VIGILANCIA);
+
 /* Chamada ao Apps Script sem depender de CORS */
 function jsonp(url, params, ms){
   return new Promise((resolve, reject) => {
@@ -694,7 +701,7 @@ function montarEntrada(){
     CONFIG.duracaoMinutos > 0 ? `<strong>${CONFIG.duracaoMinutos} minutos</strong> de duração` : "sem limite de tempo",
     "cada aluno responde <strong>uma única vez</strong>"
   ];
-  if(CONFIG.encerrarAoSairDaAba && !MODO_TESTE){
+  if(VIGIAR){
     regras.push(CONFIG.toleranciaSaidas > 0
       ? `sair da aba encerra a prova (você tem <strong>${CONFIG.toleranciaSaidas}</strong> aviso antes)`
       : `<strong>sair da aba encerra a prova imediatamente</strong>`);
@@ -702,7 +709,7 @@ function montarEntrada(){
   $("#inRegras").innerHTML = "<strong>Antes de começar:</strong><ul class='regras'>" +
     regras.map(r => `<li>${r}</li>`).join("") + "</ul>";
 
-  if(CONFIG.encerrarAoSairDaAba && !MODO_TESTE){
+  if(VIGIAR){
     $("#inExtra").innerHTML = `<div class="aviso warn">Feche os outros aplicativos e silencie as notificações
       antes de iniciar. Trocar de aba, minimizar a janela ou abrir outro app <strong>entrega a prova
       automaticamente</strong>, com as respostas que estiverem marcadas até ali.</div>`;
@@ -712,7 +719,10 @@ function montarEntrada(){
 
   if(MODO_TESTE){
     $("#inExtra").innerHTML = `<div class="aviso warn">Modo de teste do professor: sem código de acesso,
-      sem vigilância de aba, pode repetir quantas vezes quiser e o gabarito aparece no fim.
+      ${TESTAR_VIGILANCIA
+        ? "<strong>com</strong> a vigilância de aba ligada (trocar de aba encerra a prova)"
+        : "sem vigilância de aba"}, pode repetir quantas vezes quiser e o gabarito aparece no fim.
+      ${TESTAR_VIGILANCIA ? "" : "Para conferir se a trava de sair da aba funciona, abra com <code>?teste&amp;vigia</code>."}
       Para os alunos, use o endereço <strong>sem</strong> o <code>?teste</code>.</div>`;
     return;
   }
@@ -725,19 +735,72 @@ function montarEntrada(){
         `<div class="aviso ok" style="margin-top:18px">Esta prova já foi entregue por
          <strong>${esc(d.nome)}</strong>.<br>Protocolo: <strong>${esc(d.protocolo)}</strong></div>
          <p class="tiny mut center" style="margin-top:12px">Se você não é essa pessoa, avise o professor.</p>`;
+      return;
     }catch(e){ store.del(CHAVE + "_enviado"); }
+  }
+
+  /* Prova em andamento neste aparelho (a página caiu, recarregou, travou).
+     O nome já saiu da lista, então a volta é por aqui. */
+  const rasc = store.get(CHAVE + "_rascunho");
+  if(rasc){
+    try{
+      const d = JSON.parse(rasc);
+      if(d.nome && d.turma){
+        $("#inExtra").insertAdjacentHTML("beforeend", `
+          <div class="aviso ok">
+            <strong>Você tem uma prova em andamento.</strong><br>
+            ${esc(d.nome)} · ${esc(d.turma)} — o cronômetro continuou correndo.
+            <button class="btn" id="btnRetomar" style="margin-top:12px">Continuar de onde parei</button>
+          </div>`);
+        $("#btnRetomar").onclick = () => { aluno = { nome:d.nome, turma:d.turma }; iniciarProva(); };
+      }
+    }catch(e){ store.del(CHAVE + "_rascunho"); }
   }
 }
 
 /* turma escolhida -> carrega os nomes daquela turma */
-$("#cTurma").addEventListener("change", () => {
-  const lista = (CONFIG.alunos && CONFIG.alunos[$("#cTurma").value]) || [];
+/* compara nomes ignorando acento, maiúscula e espaço a mais */
+const normalizarNome = t => String(t||"").trim().toLowerCase()
+  .replace(/\s+/g," ").normalize("NFD").replace(/[̀-ͯ]/g,"");
+
+$("#cTurma").addEventListener("change", async () => {
+  const turma = $("#cTurma").value;
   const sel = $("#cAluno");
+  let lista = (CONFIG.alunos && CONFIG.alunos[turma]) || [];
+
+  $("#boxNomeLivre").classList.add("hidden");
+  $("#erroEntrada").classList.add("hidden");
+  sel.disabled = true;
+  sel.innerHTML = '<option selected>Carregando a lista…</option>';
+
+  /* tira da lista quem já começou ou já entregou esta prova */
+  let semInternet = false;
+  if(CONFIG.urlPlanilha && !MODO_TESTE){
+    try{
+      const r = await jsonp(CONFIG.urlPlanilha, { acao:"iniciados", turma, prova: CONFIG.titulo });
+      if(r && Array.isArray(r.nomes)){
+        const fora = new Set(r.nomes.map(normalizarNome));
+        lista = lista.filter(n => !fora.has(normalizarNome(n)));
+      }
+    }catch(e){ semInternet = true; }
+  }
+
+  if(!lista.length){
+    sel.innerHTML = '<option selected>Todos os alunos desta turma já fizeram a prova</option>';
+    sel.disabled = true;
+    return;
+  }
+
   sel.innerHTML = '<option value="" disabled selected>Selecione seu nome</option>' +
     lista.map(nome => `<option>${esc(nome)}</option>`).join("") +
     (CONFIG.permitirNomeForaDaLista ? '<option value="__outro__">Meu nome não está na lista</option>' : "");
   sel.disabled = false;
-  $("#boxNomeLivre").classList.add("hidden");
+
+  if(semInternet){
+    $("#erroEntrada").textContent =
+      "Sem conexão para conferir quem já fez a prova — a lista está completa. Avise o professor.";
+    $("#erroEntrada").classList.remove("hidden");
+  }
 });
 
 $("#cAluno").addEventListener("change", () => {
@@ -763,24 +826,24 @@ $("#formEntrada").addEventListener("submit", async e => {
 
   aluno = { nome, turma };
 
-  /* confere na planilha se este aluno já entregou (vale para qualquer aparelho) */
+  /* Registra o INÍCIO na planilha. É esse registro que tira o nome da lista
+     suspensa para todo mundo, na hora — não a entrega. */
   if(CONFIG.urlPlanilha && !MODO_TESTE){
-    btn.disabled = true; btn.textContent = "Verificando sua matrícula…";
+    btn.disabled = true; btn.textContent = "Liberando sua prova…";
     try{
-      const r = await jsonp(CONFIG.urlPlanilha, { acao:"verificar", nome, turma, prova: CONFIG.titulo });
-      if(r && r.jaFez){
-        btn.disabled = false; btn.textContent = "Iniciar prova";
-        return mostrarErro("Consta que você já entregou esta prova" +
-          (r.protocolo ? " (protocolo " + r.protocolo + ")" : "") + ". Fale com o professor.");
+      const r = await jsonp(CONFIG.urlPlanilha, { acao:"iniciar", nome, turma, prova: CONFIG.titulo });
+      btn.disabled = false; btn.textContent = "Iniciar prova";
+      if(r && r.jaIniciou){
+        return mostrarErro("Consta que você já começou esta prova" +
+          (r.quando ? " em " + r.quando : "") + ". Fale com o professor.");
       }
     }catch(err){
+      btn.disabled = false; btn.textContent = "Iniciar prova";
       if(CONFIG.bloquearSemVerificacao){
-        btn.disabled = false; btn.textContent = "Iniciar prova";
-        return mostrarErro("Não foi possível confirmar sua matrícula. Verifique a internet e tente de novo.");
+        return mostrarErro("Não foi possível liberar sua prova. Verifique a internet e tente de novo.");
       }
       aluno.naoVerificado = true;   // segue, mas fica registrado na planilha
     }
-    btn.disabled = false; btn.textContent = "Iniciar prova";
   }
 
   iniciarProva();
@@ -837,7 +900,7 @@ function iniciarProva(){
   }
   /* a vigilância só começa depois que a tela assenta, para que a troca de foco
      do próprio carregamento não seja confundida com o aluno saindo da prova */
-  if(CONFIG.encerrarAoSairDaAba && !MODO_TESTE) setTimeout(ligarVigilancia, 1200);
+  if(VIGIAR) setTimeout(ligarVigilancia, 1200);
 
   render();
 }
@@ -940,7 +1003,7 @@ $("#btnProx").onclick = () => { if(atual<prova.length-1){ atual++; render(); scr
 function salvarRascunho(){
   if(MODO_TESTE) return;
   store.set(CHAVE + "_rascunho", JSON.stringify({
-    nome:aluno.nome, prova, respostas, inicioEm, atual, saidasDaAba, avisosRestantes
+    nome:aluno.nome, turma:aluno.turma, prova, respostas, inicioEm, atual, saidasDaAba, avisosRestantes
   }));
 }
 
@@ -1082,12 +1145,17 @@ function mostrarResultado(r, envio, motivo, status){
                                (<code>urlPlanilha</code> está vazio), então esta prova
                                <strong>não foi gravada</strong> em lugar nenhum.</div>` : "";
 
-  const notaHtml = CONFIG.mostrarNotaNaHora
+  /* A nota só aparece se você ligar mostrarNotaNaHora, ou no seu modo ?teste */
+  const verNota = CONFIG.mostrarNotaNaHora || MODO_TESTE;
+  const notaHtml = verNota
     ? `<p class="small mut" style="margin-top:18px">Sua nota</p>
        <div class="nota" style="color:${r.nota>=6?"var(--ok)":"var(--err)"}">${r.nota.toFixed(1)}</div>
        <p class="small mut">${r.acertos} de ${prova.length} questões</p>`
-    : `<div class="aviso info" style="margin-top:18px">Sua prova foi entregue.
-       O professor divulgará as notas depois da correção.</div>`;
+    : `<p style="font-size:1.08rem;margin-top:16px">
+         Suas respostas foram enviadas ao professor.<br>
+         <strong>Obrigado, e bom descanso!</strong>
+       </p>
+       <div class="aviso info">A correção e as notas serão divulgadas pelo professor.</div>`;
 
   const alerta =
     motivo === "saida" ? `<div class="aviso err">Sua prova foi <strong>encerrada porque você saiu da tela</strong>.
@@ -1095,7 +1163,7 @@ function mostrarResultado(r, envio, motivo, status){
     motivo === "tempo" ? `<div class="aviso warn">O tempo acabou e a prova foi enviada automaticamente.</div>` : "";
 
   $("#fimConteudo").innerHTML = `
-    <h1>Prova entregue</h1>
+    <h1>Prova concluída</h1>
     <p class="mut small">${esc(aluno.nome)} · ${esc(aluno.turma)}</p>
     ${MODO_TESTE ? `<div class="aviso warn">Envio marcado como <strong>TESTE</strong> — não conta como entrega de aluno.</div>` : ""}
     ${alerta}
