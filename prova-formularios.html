@@ -260,7 +260,7 @@ const CONFIG = {
   mostrarGabarito: false,
 
   /* --- Planilha (Google Apps Script) --- */
-  urlPlanilha: "https://script.google.com/macros/s/AKfycbyLUhxlXtpJCtrOumGaA8Crd55ToFoPxm9-5S9H0Tsfr-B7X9hqnXUu5VTCnyGWrso5Gg/exec",           // cole aqui o link /exec do Apps Script
+  urlPlanilha: "",           // cole aqui o link /exec do Apps Script
   /* true = sem internet o aluno NÃO consegue começar (mais rígido, mais frágil).
      false = começa mesmo assim; a planilha registra que não deu para verificar. */
   bloquearSemVerificacao: false,
@@ -727,16 +727,23 @@ function montarEntrada(){
     return;
   }
 
+  /* ?liberar — destrava este computador na marra, sem depender de internet.
+     Serve para o professor reaproveitar a máquina de um aluno. */
+  if(/[?&]liberar\b/i.test(location.search)){
+    store.del(CHAVE + "_enviado");
+    store.del(CHAVE + "_rascunho");
+    $("#inExtra").insertAdjacentHTML("beforeend",
+      `<div class="aviso ok">Este computador foi liberado para um novo aluno.</div>`);
+  }
+
   const feito = store.get(CHAVE + "_enviado");
   if(feito){
-    try{
-      const d = JSON.parse(feito);
-      $("#formEntrada").innerHTML =
-        `<div class="aviso ok" style="margin-top:18px">Esta prova já foi entregue por
-         <strong>${esc(d.nome)}</strong>.<br>Protocolo: <strong>${esc(d.protocolo)}</strong></div>
-         <p class="tiny mut center" style="margin-top:12px">Se você não é essa pessoa, avise o professor.</p>`;
+    let d = null;
+    try{ d = JSON.parse(feito); }catch(e){ store.del(CHAVE + "_enviado"); }
+    if(d){
+      travarPorEntregaLocal(d);
       return;
-    }catch(e){ store.del(CHAVE + "_enviado"); }
+    }
   }
 
   /* Prova em andamento neste aparelho (a página caiu, recarregou, travou).
@@ -759,6 +766,37 @@ function montarEntrada(){
 }
 
 /* turma escolhida -> carrega os nomes daquela turma */
+/* Este computador acha que a prova já foi entregue aqui. Antes de barrar,
+   pergunta à planilha: se o professor apagou o registro, o computador se libera. */
+async function travarPorEntregaLocal(d){
+  $("#formEntrada").innerHTML = `
+    <div class="aviso ok" style="margin-top:18px">Esta prova já foi entregue por
+      <strong>${esc(d.nome)}</strong>.<br>Protocolo: <strong>${esc(d.protocolo || "-")}</strong></div>
+    <p class="tiny mut center" id="statusDestrava" style="margin-top:12px">
+      Conferindo com o professor…</p>`;
+
+  const aviso = msg => { const el = $("#statusDestrava"); if(el) el.innerHTML = msg; };
+
+  if(!CONFIG.urlPlanilha){
+    return aviso("Se você não é essa pessoa, avise o professor.");
+  }
+  try{
+    const r = await jsonp(CONFIG.urlPlanilha, {
+      acao: "verificar", nome: d.nome, turma: d.turma || "", prova: CONFIG.titulo
+    });
+    if(r && !r.jaFez && !r.jaIniciou){
+      // o professor apagou o registro na planilha: este computador está livre
+      store.del(CHAVE + "_enviado");
+      store.del(CHAVE + "_rascunho");
+      aviso("Liberado pelo professor. Recarregando…");
+      return setTimeout(() => location.reload(), 900);
+    }
+    aviso("Se você não é essa pessoa, avise o professor.");
+  }catch(e){
+    aviso("Não foi possível conferir com o professor. Avise-o.");
+  }
+}
+
 /* compara nomes ignorando acento, maiúscula e espaço a mais */
 const normalizarNome = t => String(t||"").trim().toLowerCase()
   .replace(/\s+/g," ").normalize("NFD").replace(/[̀-ͯ]/g,"");
@@ -1095,7 +1133,7 @@ async function finalizar(motivo){
 
   if(!MODO_TESTE){
     store.del(CHAVE + "_rascunho");
-    store.set(CHAVE + "_enviado", JSON.stringify({ nome: aluno.nome, protocolo }));
+    store.set(CHAVE + "_enviado", JSON.stringify({ nome: aluno.nome, turma: aluno.turma, protocolo }));
   }
 }
 
